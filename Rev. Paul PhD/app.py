@@ -9,7 +9,10 @@ import streamlit as st
 
 st.set_page_config(page_title="Survey Demographic Dashboard", layout="wide")
 
-SURVEY_FILE = Path(__file__).parent / "Survey.xlsx"
+SURVEY_FILES = (
+    Path(__file__).parent / "Survey.csv",
+    Path(__file__).parent / "Survey.xlsx",
+)
 
 RENAME_MAP: Dict[str, str] = {
     "Start time": "Start Time",
@@ -65,12 +68,21 @@ def clean_string_series(series: pd.Series) -> pd.Series:
 
 
 @st.cache_data(show_spinner=False)
-def load_data(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        st.error(f"Could not find the survey file at {path}")
+def load_data() -> pd.DataFrame:
+    for path in SURVEY_FILES:
+        if path.exists():
+            if path.suffix.lower() == ".csv":
+                df = pd.read_csv(path)
+            else:
+                df = pd.read_excel(path)
+            break
+    else:
+        st.error(
+            "Could not find the survey file. Please add 'Survey.csv' or 'Survey.xlsx' "
+            "next to the app file."
+        )
         st.stop()
 
-    df = pd.read_excel(path)
     df = df.rename(columns=RENAME_MAP)
     df.columns = [col.strip() for col in df.columns]
 
@@ -222,7 +234,7 @@ def main() -> None:
     st.title("Survey Demographic Dashboard")
     st.caption("Interactive overview of respondent demographics and engagement patterns.")
 
-    data = load_data(SURVEY_FILE)
+    data = load_data()
 
     with st.sidebar:
         st.header("Filter Responses")
